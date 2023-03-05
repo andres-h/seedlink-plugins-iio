@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+import time
+import datetime
+import argparse
+from utils import Seedlink, IIODevice
+
+
+VERSION = "2023.064"
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.set_defaults(
+        device = "dps310",
+        sample_rate = 1,
+    )
+
+    parser.add_argument("--version",
+        action = "version",
+        version = "%(prog)s " + VERSION
+    )
+
+    parser.add_argument("-d", "--device",
+        help = "IIO device name (default %(default)s)"
+    )
+
+    parser.add_argument("-r", "--sample-rate",
+        type = int,
+        help = "sample rate (default %(default)s)"
+    )
+
+    parser.add_argument("-s", "--station",
+        help = "station ID"
+    )
+
+    parser.add_argument("plugin_id",
+        nargs = "?",
+        help = "plugin ID"
+    )
+
+    args = parser.parse_args()
+
+    sl = Seedlink()
+    dev = IIODevice("dps310")
+    dev.set("in_pressure_sampling_frequency", 2*args.sample_rate, True)
+    dev.set("in_pressure_oversampling_ratio", 64, True)
+    dev.set("in_temp_sampling_frequency", 2*args.sample_rate, True)
+    dev.set("in_temp_oversampling_ratio", 64, True)
+
+    period = 1.0 / args.sample_rate
+    t = datetime.datetime.utcnow()
+
+    while True:
+        pressure = int(float(dev.get("in_pressure_input")) * 1000.0)
+        temp = int(dev.get("in_temp_input"))
+
+        sl.send_raw3(args.station, "D", t, 0, -1, (pressure,))
+        sl.send_raw3(args.station, "K", t, 0, -1, (temp,))
+
+        t_now = datetime.datetime.utcnow()
+        t_diff = (t_now - t).total_seconds()
+
+        if t_diff < 0 or t_diff > period:
+            t = t_now
+            continue
+
+        else:
+            time.sleep(period - t_diff)
+            t += datetime.timedelta(seconds=period)
+
+
+if __name__ == "__main__":
+    main()
+

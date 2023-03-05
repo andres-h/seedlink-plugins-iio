@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+
+import sys
+import struct
+import datetime
+import argparse
+from utils import Seedlink, IIODevice
+
+
+VERSION = "2023.064"
+
+
+def _counts(x):
+    x = (x >> 4) & 0xfffff
+
+    if x > 524287:
+        x -= 1048576
+
+    return x
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.set_defaults(
+        device = "adxl355",
+        sample_rate = 500,
+    )
+
+    parser.add_argument("--version",
+        action = "version",
+        version = "%(prog)s " + VERSION
+    )
+
+    parser.add_argument("-d", "--device",
+        help = "IIO device name (default %(default)s)"
+    )
+
+    parser.add_argument("-r", "--sample-rate",
+        type = int,
+        help = "sample rate (default %(default)s)"
+    )
+
+    parser.add_argument("-s", "--station",
+        help = "station ID"
+    )
+
+    parser.add_argument("plugin_id",
+        nargs = "?",
+        help = "plugin ID"
+    )
+
+    args = parser.parse_args()
+
+    sl = Seedlink()
+    dev = IIODevice("adxl355", 24)
+    dev.set("buffer/enable", 0)
+    dev.set("scan_elements/*_en", 0)
+    dev.set("in_accel_sampling_frequency", args.sample_rate)
+    dev.set("scan_elements/in_accel_x_en", 1)
+    dev.set("scan_elements/in_accel_y_en", 1)
+    dev.set("scan_elements/in_accel_z_en", 1)
+    dev.set("scan_elements/in_timestamp_en", 1)
+    dev.set("buffer/length", 256)
+    dev.set("buffer/enable", 1)
+
+    t_prev = None
+
+    for rec in dev:
+        data = struct.unpack(">iii", rec[:12])
+        ts, = struct.unpack("<q", rec[16:])
+        t = datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=ts/1000)
+        sl.send_raw3(args.station, "X", t, 0, -1, (_counts(data[0]),))
+        sl.send_raw3(args.station, "Y", t, 0, -1, (_counts(data[1]),))
+        sl.send_raw3(args.station, "Z", t, 0, -1, (_counts(data[2]),))
+
+        if t_prev is not None and (
+                t - t_prev < datetime.timedelta(0, 0, 1000000 / (args.sample_rate * 1.1)) or
+                t - t_prev > datetime.timedelta(0, 0, 1000000 / (args.sample_rate * 0.9))):
+            print("%s: time diff %fs" % (args.plugin_id, (t - t_prev).total_seconds()),
+                  file=sys.stderr)
+
+        t_prev = t
+
+
+if __name__ == "__main__":
+    main()
+

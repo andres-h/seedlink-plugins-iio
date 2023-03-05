@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<seiscomp>
+	<binding module="seedlink" name="sensehat" category="sources">
+		<description>ADXL355 accelerometer via IIO</description>
+		<configuration>
+			<parameter name="device" type="string" default="adxl355">
+				<description>
+				Device name.
+				</description>
+			</parameter>
+			<parameter name="samplingRate" type="int" default="500">
+				<description>
+				Sampling rate.
+				</description>
+			</parameter>
+			<parameter name="proc" type="string" default="adxl500">
+				<description>
+				Name of the proc object (defined in streams.xml); used for processing
+				raw streams (streams submitted by a plugin as raw samples).
+				</description>
+			</parameter>
+		</configuration>
+	</binding>
+</seiscomp>
