@@ -4,7 +4,6 @@ import sys
 import os
 import glob
 import struct
-import time
 
 
 _doy = (0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365)
@@ -76,26 +75,17 @@ class IIODevice(object):
         with open(os.path.join(self.__dev, attr)) as f:
             return f.read().strip()
 
-    def set(self, attr, value, verify=False):
+    def set(self, attr, value):
         found = False
 
         for path in glob.glob(os.path.join(self.__dev, attr)):
             found = True
 
-            for i in range(10):
-                with open(path, "w") as f:
-                    f.write(str(value))
-
-                if not verify or self.get(attr) == str(value):
-                    break
-
-                print("%s: %s != %s" % (path, self.get(attr), str(value)),
-                      file=sys.stderr)
-
-                time.sleep(1)
+            with open(path, "w") as f:
+                f.write(str(value))
 
         if not found:
-            raise Exception("attribute %s not found" % attr)
+            raise Exception("%s not found" % os.path.join(self.__dev, attr))
 
     def __iter__(self):
         if self.__recsize == 0:

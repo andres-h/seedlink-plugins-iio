@@ -7,7 +7,7 @@ import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.064"
+VERSION = "2023.066"
 
 
 def _counts(x):
@@ -24,7 +24,7 @@ def main():
 
     parser.set_defaults(
         device = "adxl355",
-        sample_rate = 500,
+        sample_rate = 500
     )
 
     parser.add_argument("--version",
@@ -46,14 +46,13 @@ def main():
     )
 
     parser.add_argument("plugin_id",
-        nargs = "?",
         help = "plugin ID"
     )
 
     args = parser.parse_args()
 
     sl = Seedlink()
-    dev = IIODevice("adxl355", 24)
+    dev = IIODevice(args.device, 24)
     dev.set("buffer/enable", 0)
     dev.set("scan_elements/*_en", 0)
     dev.set("in_accel_sampling_frequency", args.sample_rate)

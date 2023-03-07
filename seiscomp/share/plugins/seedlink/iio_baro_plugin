@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import sys
 import time
 import datetime
 import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.064"
+VERSION = "2023.066"
 
 
 def main():
@@ -14,7 +15,7 @@ def main():
 
     parser.set_defaults(
         device = "dps310",
-        sample_rate = 1,
+        sample_rate = 1
     )
 
     parser.add_argument("--version",
@@ -36,18 +37,44 @@ def main():
     )
 
     parser.add_argument("plugin_id",
-        nargs = "?",
         help = "plugin ID"
     )
 
     args = parser.parse_args()
 
     sl = Seedlink()
-    dev = IIODevice("dps310")
-    dev.set("in_pressure_sampling_frequency", 2*args.sample_rate, True)
-    dev.set("in_pressure_oversampling_ratio", 64, True)
-    dev.set("in_temp_sampling_frequency", 2*args.sample_rate, True)
-    dev.set("in_temp_oversampling_ratio", 64, True)
+    dev = IIODevice(args.device)
+
+    settings = (
+        ("in_pressure_sampling_frequency", 2 * args.sample_rate),
+        ("in_pressure_oversampling_ratio", 64),
+        ("in_temp_sampling_frequency", 2 * args.sample_rate),
+        ("in_temp_oversampling_ratio", 64)
+    )
+
+    for i in range(10):
+        for attr, value in settings:
+            dev.set(attr, value)
+
+        # discard possibly invalid samples
+        for j in range(2):
+            dev.get("in_pressure_input")
+            dev.get("in_temp_input")
+
+        success = True
+        for attr, value in settings:
+            dev_value = int(dev.get(attr))
+            if dev_value != value:
+                print("%s: %s: %d != %d" % (args.plugin_id, attr, dev_value, value),
+                      file=sys.stderr)
+                success = False
+
+        if success:
+            break
+
+    else:
+        print("giving up", file=sys.stderr)
+        sys.exit(1)
 
     period = 1.0 / args.sample_rate
     t = datetime.datetime.utcnow()
