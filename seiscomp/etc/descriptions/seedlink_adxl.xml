@@ -8,9 +8,9 @@
 				Device name.
 				</description>
 			</parameter>
-			<parameter name="samplingRate" type="int" default="500">
+			<parameter name="sampleRate" type="int" default="500">
 				<description>
-				Sampling rate.
+				Sample rate.
 				</description>
 			</parameter>
 			<parameter name="proc" type="string" default="adxl500">

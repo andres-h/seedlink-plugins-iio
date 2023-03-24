@@ -7,7 +7,7 @@ import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.066"
+VERSION = "2023.083"
 
 
 def _counts(x):
@@ -60,26 +60,42 @@ def main():
     dev.set("scan_elements/in_accel_y_en", 1)
     dev.set("scan_elements/in_accel_z_en", 1)
     dev.set("scan_elements/in_timestamp_en", 1)
-    dev.set("buffer/length", 256)
+    dev.set("buffer/length", 1024)
     dev.set("buffer/enable", 1)
 
-    t_prev = None
+    ts_start = None
+    ts_prev = None
+    x = []
+    y = []
+    z = []
 
     for rec in dev:
         data = struct.unpack(">iii", rec[:12])
         ts, = struct.unpack("<q", rec[16:])
-        t = datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=ts/1000)
-        sl.send_raw3(args.station, "X", t, 0, -1, (_counts(data[0]),))
-        sl.send_raw3(args.station, "Y", t, 0, -1, (_counts(data[1]),))
-        sl.send_raw3(args.station, "Z", t, 0, -1, (_counts(data[2]),))
+        x.append(_counts(data[0]))
+        y.append(_counts(data[1]))
+        z.append(_counts(data[2]))
 
-        if t_prev is not None and (
-                t - t_prev < datetime.timedelta(0, 0, 1000000 / (args.sample_rate * 1.1)) or
-                t - t_prev > datetime.timedelta(0, 0, 1000000 / (args.sample_rate * 0.9))):
-            print("%s: time diff %fs" % (args.plugin_id, (t - t_prev).total_seconds()),
+        if ts_start is None:
+            ts_start = ts
+
+        elif ts - ts_start >= 1e8:
+            t = datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=ts_start/1000)
+            sl.send_raw3(args.station, "X", t, 0, -1, x)
+            sl.send_raw3(args.station, "Y", t, 0, -1, y)
+            sl.send_raw3(args.station, "Z", t, 0, -1, z)
+            ts_start = None
+            x = []
+            y = []
+            z = []
+
+        if ts_prev is not None and (
+                ts - ts_prev < 1e9 / (args.sample_rate * 1.1) or
+                ts - ts_prev > 1e9 / (args.sample_rate * 0.9)):
+            print("%s: time diff %fs" % (args.plugin_id, (ts - ts_prev) / 1e9),
                   file=sys.stderr)
 
-        t_prev = t
+        ts_prev = ts
 
 
 if __name__ == "__main__":

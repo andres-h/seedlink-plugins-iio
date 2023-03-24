@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import time
 import datetime
 import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.066"
+VERSION = "2023.083"
 
 
 def main():
@@ -56,10 +57,21 @@ def main():
         for attr, value in settings:
             dev.set(attr, value)
 
-        # discard possibly invalid samples
-        for j in range(2):
-            dev.get("in_pressure_input")
-            dev.get("in_temp_input")
+        try:
+            # discard possibly invalid samples
+            for j in range(2):
+                dev.get("in_pressure_input")
+                dev.get("in_temp_input")
+
+        except TimeoutError:
+            print("%s: timeout: reloading driver" % args.plugin_id,
+                  file=sys.stderr)
+
+            os.system("rmmod dps310")
+            os.system("modprobe dps310")
+            time.sleep(1)
+            dev = IIODevice(args.device)
+            continue
 
         success = True
         for attr, value in settings:
@@ -73,7 +85,7 @@ def main():
             break
 
     else:
-        print("giving up", file=sys.stderr)
+        print("%s: giving up" % args.plugin_id, file=sys.stderr)
         sys.exit(1)
 
     period = 1.0 / args.sample_rate
