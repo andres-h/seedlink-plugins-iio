@@ -7,7 +7,7 @@ import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.083"
+VERSION = "2023.088"
 
 
 def _counts(x):
@@ -37,7 +37,7 @@ def main():
     )
 
     parser.add_argument("-r", "--sample-rate",
-        type = int,
+        type = float,
         help = "sample rate (default %(default)s)"
     )
 
@@ -65,6 +65,7 @@ def main():
 
     ts_start = None
     ts_prev = None
+    corrected = 0
     x = []
     y = []
     z = []
@@ -75,6 +76,21 @@ def main():
         x.append(_counts(data[0]))
         y.append(_counts(data[1]))
         z.append(_counts(data[2]))
+
+        if ts_prev is not None and (
+                ts - ts_prev < 1e9 / (args.sample_rate * 1.1) or
+                ts - ts_prev > 1e9 / (args.sample_rate * 0.9)):
+
+            if corrected < args.sample_rate:
+                ts = ts_prev + 1e9 / args.sample_rate
+                corrected += 1
+
+            else:
+                print("%s: time diff %fs" % (args.plugin_id, (ts - ts_prev) / 1e9),
+                      file=sys.stderr)
+
+        else:
+            corrected = 0
 
         if ts_start is None:
             ts_start = ts
@@ -88,12 +104,6 @@ def main():
             x = []
             y = []
             z = []
-
-        if ts_prev is not None and (
-                ts - ts_prev < 1e9 / (args.sample_rate * 1.1) or
-                ts - ts_prev > 1e9 / (args.sample_rate * 0.9)):
-            print("%s: time diff %fs" % (args.plugin_id, (ts - ts_prev) / 1e9),
-                  file=sys.stderr)
 
         ts_prev = ts
 

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <seiscomp>
 	<binding module="seedlink" name="sensehat" category="sources">
-		<description>DPS310 barometer via IIO</description>
+		<description>1-Wire humidity sensor (DS2438+HIH-5030)</description>
 		<configuration>
-			<parameter name="device" type="string" default="dps310">
+			<parameter name="device" type="string" default="26-000000000000">
 				<description>
-				IIO device name.
+				1-Wire device ID.
 				</description>
 			</parameter>
-			<parameter name="sampleRate" type="double" default="1">
+			<parameter name="sampleRate" type="double" default="0.1">
 				<description>
 				Sample rate.
 				</description>
 			</parameter>
-			<parameter name="proc" type="string" default="dps1">
+			<parameter name="proc" type="string" default="w1humid10s">
 				<description>
 				Name of the proc object (defined in streams.xml); used for processing
 				raw streams (streams submitted by a plugin as raw samples).

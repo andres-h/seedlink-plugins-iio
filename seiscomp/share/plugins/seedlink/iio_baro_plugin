@@ -8,7 +8,7 @@ import argparse
 from utils import Seedlink, IIODevice
 
 
-VERSION = "2023.083"
+VERSION = "2023.088"
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     )
 
     parser.add_argument("-r", "--sample-rate",
-        type = int,
+        type = float,
         help = "sample rate (default %(default)s)"
     )
 
@@ -105,9 +105,8 @@ def main():
             t = t_now
             continue
 
-        else:
-            time.sleep(period - t_diff)
-            t += datetime.timedelta(seconds=period)
+        time.sleep(period - t_diff)
+        t += datetime.timedelta(seconds=period)
 
 
 if __name__ == "__main__":

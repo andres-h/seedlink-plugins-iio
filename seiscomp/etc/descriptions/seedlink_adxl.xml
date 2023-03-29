@@ -5,10 +5,10 @@
 		<configuration>
 			<parameter name="device" type="string" default="adxl355">
 				<description>
-				Device name.
+				IIO device name.
 				</description>
 			</parameter>
-			<parameter name="sampleRate" type="int" default="500">
+			<parameter name="sampleRate" type="double" default="500">
 				<description>
 				Sample rate.
 				</description>

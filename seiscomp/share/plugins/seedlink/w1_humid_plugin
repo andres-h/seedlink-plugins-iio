@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import time
+import datetime
+import argparse
+from utils import Seedlink, W1Device
+
+
+VERSION = "2023.088"
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.set_defaults(
+        sample_rate = 0.1
+    )
+
+    parser.add_argument("--version",
+        action = "version",
+        version = "%(prog)s " + VERSION
+    )
+
+    parser.add_argument("-d", "--device",
+        help = "1-Wire device ID",
+	required = True
+    )
+
+    parser.add_argument("-r", "--sample-rate",
+        type = float,
+        help = "sample rate (default %(default)s)"
+    )
+
+    parser.add_argument("-s", "--station",
+        help = "station ID"
+    )
+
+    parser.add_argument("plugin_id",
+        help = "plugin ID"
+    )
+
+    args = parser.parse_args()
+
+    sl = Seedlink()
+    dev = W1Device(args.device)
+
+    period = 1.0 / args.sample_rate
+    t = datetime.datetime.utcnow()
+
+    while True:
+        try:
+            temp = dev.get("temperature")
+            sl.send_raw3(args.station, "K", t, 0, -1, (temp,))
+
+            try:
+                for i in range(10):
+                   vdd = dev.get("vdd") / 100.0
+                   
+                   if vdd > 3:
+                       break
+
+                   time.sleep(0.001)
+
+                for i in range(10):
+                   vad = dev.get("vad") / 100.0
+
+                   if vad < 3:
+                       break
+
+                   time.sleep(0.001)
+
+                # calculation based on HIH-5030 datasheet
+                humid = int(10 * (vad / vdd - 0.1515) / 0.00636 / (1.0546 - 0.00216 * temp / 256.0))
+                sl.send_raw3(args.station, "I", t, 0, -1, (humid,))
+
+            except:
+                print("%s: failed to get humidity sample" % args.plugin_id,
+                      file=sys.stderr)
+
+        except:
+            print("%s: failed to get temperature sample" % args.plugin_id,
+                  file=sys.stderr)
+
+        t_now = datetime.datetime.utcnow()
+        t_diff = (t_now - t).total_seconds()
+
+        if t_diff < 0 or t_diff > period:
+            t = t_now
+            continue
+
+        time.sleep(period - t_diff)
+        t += datetime.timedelta(seconds=period)
+
+
+if __name__ == "__main__":
+    main()
+

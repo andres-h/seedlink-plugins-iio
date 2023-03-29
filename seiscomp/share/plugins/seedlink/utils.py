@@ -56,6 +56,7 @@ class Seedlink(object):
         )
 
         self.__fd.write(packet)
+        self.__fd.flush()
 
 
 class IIODevice(object):
@@ -94,4 +95,20 @@ class IIODevice(object):
         with open(os.path.join("/dev", os.path.basename(self.__dev)), "rb") as f:
             while True:
                 yield f.read(self.__recsize)
+
+
+class W1Device(object):
+    def __init__(self, name):
+        self.__dev = os.path.join("/sys/bus/w1/devices", name)
+
+    def get(self, attr):
+        for i in range(10):
+            try:
+                with open(os.path.join(self.__dev, attr)) as f:
+                    return int(f.read())
+
+            except Exception as e:
+                time.sleep(0.001)
+
+        raise e
 
